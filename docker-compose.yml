@@ -1,0 +1,61 @@
+version: '3'
+services:
+  zabbix-server:
+    image: zabbix/zabbix-server-mysql:latest
+    ports:
+      - "10051:10051"
+    environment:
+      - ZBX_DBHost=mysql-server
+      - ZBX_DBName=zabbix
+      - ZBX_DBUser=zabbix
+      - ZBX_DBPassword=zabbix
+    networks:
+      - zabbix-network
+    depends_on:
+      - mysql-server
+
+  zabbix-web:
+    image: zabbix/zabbix-web-nginx-mysql:latest
+    ports:
+      - "80:8080"
+    environment:
+      - ZBX_DBHost=mysql-server
+      - ZBX_DBName=zabbix
+      - ZBX_DBUser=zabbix
+      - ZBX_DBPassword=zabbix
+      - ZBX_SERVER_HOST=zabbix-server
+    networks:
+      - zabbix-network
+    depends_on:
+      - zabbix-server
+
+  mysql-server:
+    image: mysql:latest
+    environment:
+      - MYSQL_ROOT_PASSWORD=zabbix
+      - MYSQL_DATABASE=zabbix
+      - MYSQL_USER=zabbix
+      - MYSQL_PASSWORD=zabbix
+    volumes:
+      - /var/lib/mysql
+    networks:
+      - zabbix-network
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    depends_on:
+      - zabbix-web
+    networks:
+      - zabbix-network
+    environment:
+      - GF_SERVER_ROOT_URL=http://grafana-server
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_INSTALL_PLUGINS=grafana-zabbix-app
+    links:
+      - zabbix-web:grafana-server
+
+networks:
+  zabbix-network:
